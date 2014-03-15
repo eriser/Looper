@@ -18,7 +18,7 @@ class TrackRecorder : public QObject {
 
 	signals:
 
-		void finished( QString out_file_path );
+		void sig_finished( QString file_path );
 
 	public:
 
@@ -40,6 +40,8 @@ class TrackRecorder : public QObject {
 		bool auto_start;
 		bool auto_stop;
 		QAudioRecorder *rec;
+		QAudioInput *audio;
+		QFile f;
 
 };
 

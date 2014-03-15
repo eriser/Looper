@@ -23,6 +23,7 @@ class MainWindow : public QMainWindow {
 
 		void whatevz();
 		void recording_stop();
+		void slot_recording_finished( QString file_path );
 
 	signals:
 
@@ -32,8 +33,9 @@ class MainWindow : public QMainWindow {
 	private:
 
 		Ui::MainWindow *ui;
-		QThread *recorder_thread;
 		TrackRecorder track_rec;
+		QAudioOutput *audio;
+		QFile f;
 
 };
 

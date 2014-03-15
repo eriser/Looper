@@ -18,12 +18,13 @@ void TrackRecorder::start() {
 
 	std::cout << "Recording started" << std::endl;
 
-	QAudioEncoderSettings settings;
+	/*QAudioEncoderSettings settings;
 	settings.setCodec( "audio/pcm" );
 	settings.setSampleRate( 44100 );
 	settings.setBitRate( 64000 );
 	settings.setQuality( QMultimedia::EncodingQuality( QMultimedia::NormalQuality ) );
 	settings.setEncodingMode( QMultimedia::ConstantQualityEncoding );
+	settings.setChannelCount( 1 );*/
 
 	std::cout << "dev" << std::endl;
 	foreach( const QString &device, this->rec->audioInputs() ) {
@@ -45,12 +46,15 @@ void TrackRecorder::start() {
 		std::cout << sampleRate << std::endl;
 	}
 
-	QString container = "audio/x-wav";
+	/*
+	QString container = "audio/x-raw";
 	this->rec->setEncodingSettings( settings, QVideoEncoderSettings(), container );
 	this->rec->setAudioInput( "Integrated Microphone Array (ID" );
 
 	this->rec->setOutputLocation( QUrl::fromLocalFile( this->dest_file_path ) );
+	*/
 
+	/*
 	connect( this->rec, SIGNAL( durationChanged( qint64 ) ), this, SLOT( update_progress( qint64 ) ) );
 	connect( this->rec, SIGNAL( stateChanged( QMediaRecorder::State ) ),
 			this, SLOT( rec_state_changed( QMediaRecorder::State ) ) );
@@ -58,12 +62,35 @@ void TrackRecorder::start() {
 			this, SLOT( rec_error() ) );
 
 	this->rec->record();
+	*/
+
+	f.setFileName( this->dest_file_path );
+	f.open( QIODevice::WriteOnly | QIODevice::Truncate );
+
+	QAudioFormat format;
+	// Set up the desired format, for example:
+	format.setSampleRate( 44100 );
+	format.setChannelCount( 2 );
+	format.setSampleSize( 16 );
+	format.setCodec("audio/pcm");
+	format.setByteOrder( QAudioFormat::LittleEndian );
+	format.setSampleType( QAudioFormat::UnSignedInt );
+
+	QAudioDeviceInfo info = QAudioDeviceInfo::defaultInputDevice();
+	if (!info.isFormatSupported(format)) {
+		std::cout << "Default format not supported, trying to use the nearest." << std::endl;
+		format = info.nearestFormat(format);
+	}
+
+	audio = new QAudioInput( format, this );
+	// connect(audio, SIGNAL(stateChanged(QAudio::State)), this, SLOT(handleStateChanged(QAudio::State)));
+
+	audio->start( &f );
 
 }
 
 void TrackRecorder::stop() {
 
-	// Stop recording
 	std::cout << "recording stopped" << std::endl;
 
 	if( this->auto_start ) {
@@ -74,15 +101,41 @@ void TrackRecorder::stop() {
 		// cut end until sound
 	}
 
-	this->rec->stop();
+	this->audio->stop();
+	// this->rec->stop();
 
-	QMediaPlayer *player = new QMediaPlayer(this);
-	player->setVolume(100);
+	QFile newfile;
+	QString p;
+	p = this->dest_file_path;
+	p += "xxx";
+	newfile.setFileName( p );\
+	newfile.open( QIODevice::WriteOnly | QIODevice::Truncate );
 
-	player->setMedia( QUrl::fromLocalFile( this->dest_file_path ) );
-	player->play();
+	this->f.close();
+	this->f.open( QIODevice::ReadOnly );
 
-	emit finished( this->dest_file_path );
+	QByteArray qb_arr = this->f.readAll();
+
+	for( QByteArray::iterator it = qb_arr.begin(); it != qb_arr.end(); ++it ) {
+		static int two_byte_read = 0;
+		static quint32 word = 0;
+		if( two_byte_read == 0 ) {
+			word = *it;
+			two_byte_read = 1;
+		} else {
+			word |= (*it) << 8;
+			std::cout << "Word: " << word << std::endl;
+			/*if( word >= 20 ) {
+				std::cout << "wieksze" << std::endl;
+			} else {
+				std::cout << "mniejsze" << std::endl;
+			}*/
+			word = 0;
+			two_byte_read = 0;
+		}
+	}
+
+	emit sig_finished( p ); // this->dest_file_path );
 
 }
 
