@@ -23,7 +23,8 @@ class MainWindow : public QMainWindow {
 
 		void whatevz();
 		void recording_stop();
-		void slot_recording_finished( QString file_path );
+		void slot_recording_finished( QString file_path, quint64 start_offset, quint64 end_offset );
+		void slot_handle_audio_state( QAudio::State new_state );
 
 	signals:
 

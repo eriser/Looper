@@ -49,12 +49,15 @@ void TrackRecorder::stop() {
 	this->f.close();
 	this->audio->stop();
 
-	QString p;
-	p = this->dest_file_path;
-	p += "xxx";
-
 	FILE *raw_audio_file_in = fopen( this->dest_file_path.toStdString().c_str(), "rb" );
-	FILE *raw_audio_file_out = fopen( p.toStdString().c_str(), "wb" );
+
+	quint64 audio_start_offset = 0;
+	quint64 audio_end_offset = 0;
+
+	// Get size of file
+	fseek( raw_audio_file_in, 0, SEEK_END );
+	audio_end_offset = ftell( raw_audio_file_in );
+	rewind( raw_audio_file_in );
 
 	// Must be 10 000 - matched to threshold in this->sound_reached()
 	#define AVG_WINDOW_MAX_SIZE 10000
@@ -63,48 +66,51 @@ void TrackRecorder::stop() {
 
 	if( this->auto_start ) {
 
-		bool start_detected_flag = false;
 		while( !feof( raw_audio_file_in ) ) {
 
 			fread( samples_buf, sizeof(unsigned short int), AVG_WINDOW_MAX_SIZE, raw_audio_file_in );
 
-			if( !start_detected_flag ) {
-				start_detected_flag = this->sound_reached( samples_buf, AVG_WINDOW_MAX_SIZE );
-			} else {
-				fwrite( samples_buf, sizeof(unsigned short int), AVG_WINDOW_MAX_SIZE, raw_audio_file_out );
+			if( this->sound_reached( samples_buf, AVG_WINDOW_MAX_SIZE ) ) {
+				audio_start_offset = ftell( raw_audio_file_in ) - sizeof(unsigned short int) * AVG_WINDOW_MAX_SIZE;
+				break;
 			}
 
 		}
 
-	} else {
-		fread( samples_buf, sizeof(unsigned short int), AVG_WINDOW_MAX_SIZE, raw_audio_file_in );
-		fwrite( samples_buf, sizeof(unsigned short int), AVG_WINDOW_MAX_SIZE, raw_audio_file_out );
 	}
 
 	if( this->auto_stop ) {
 
 		// SEEK_END portability ?
 		fseek( raw_audio_file_in, 0, SEEK_END );
-		fseek( raw_audio_file_out, 0, SEEK_END );
+		std::cout << "End pos: " << ftell( raw_audio_file_in ) << std::endl;
+		fseek( raw_audio_file_in, -AVG_WINDOW_MAX_SIZE * sizeof(unsigned short int), SEEK_CUR );
 
-		// Temporary file, for audio stop detection
-		FILE *tmp = tmpfile();
-		bool end_detected_flag = false;
+		while( ftell( raw_audio_file_in ) != 0 ) {
 
-		// _out - because data a
-		while( ftell( raw_audio_file_out ) != 0 ) {
-			fseek( raw_audio_file_out, -AVG_WINDOW_MAX_SIZE, SEEK_CUR );
-			fread( samples_buf, sizeof(unsigned short int), AVG_WINDOW_MAX_SIZE, raw_audio_file_out );
+			if( ferror( raw_audio_file_in ) != 0 ) {
+				std::cout << "File error ! " << std::endl;
+				break;
+			}
+
+			fread( samples_buf, sizeof(unsigned short int), AVG_WINDOW_MAX_SIZE, raw_audio_file_in );
+
+			if( this->sound_reached( samples_buf, AVG_WINDOW_MAX_SIZE ) ) {
+				audio_end_offset = ftell( raw_audio_file_in );
+				audio_end_offset -= /*2 **/ AVG_WINDOW_MAX_SIZE * ( sizeof(unsigned short int) );
+				break;
+			}
+
+			// -2: fread moves forward
+			fseek( raw_audio_file_in, (-2) * AVG_WINDOW_MAX_SIZE * ( sizeof(unsigned short int) ), SEEK_CUR );
+
 		}
-
-		fclose( tmp );
 
 	}
 
 	fclose( raw_audio_file_in );
-	fclose( raw_audio_file_out );
 
-	emit sig_finished( p ); // this->dest_file_path );
+	emit sig_finished( this->dest_file_path, audio_start_offset, audio_end_offset ); // this->dest_file_path );
 
 }
 
@@ -150,14 +156,19 @@ void TrackRecorder::set_max_silence_time( int max_silence_sec ) {
 
 void TrackRecorder::set_auto_start( bool yesno ) {
 
+	this->auto_start = yesno;
+
 }
 
 void TrackRecorder::set_auto_stop( bool yesno ) {
+
+	this->auto_stop = yesno;
 
 }
 
 void TrackRecorder::cmov_avg( unsigned short int *out_avg, unsigned short int new_sample, int sample_count ) {
 
+	// Cumulative moving average
 	*out_avg = ( new_sample + sample_count * (*out_avg) ) / ( sample_count + 1 );
 
 }
