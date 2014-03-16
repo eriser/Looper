@@ -30,7 +30,7 @@ void MainWindow::whatevz() {
 	QMediaPlayer *player = new QMediaPlayer(this);
 	player->setVolume(50);
 	player->setMedia(QUrl::fromLocalFile("C:/ChatIn.wav"));
-	player->play();
+	// player->play();
 
 	this->track_rec.set_dest_file( fpath );
 	this->track_rec.start();
@@ -56,7 +56,7 @@ void MainWindow::slot_recording_finished( QString file_path ) {
 	QAudioFormat format;
 	// Set up the format, eg.
 	format.setSampleRate( 44100 );
-	format.setChannelCount( 2 );
+	format.setChannelCount( 1 );
 	format.setSampleSize( 16 );
 	format.setCodec( "audio/pcm" );
 	format.setByteOrder( QAudioFormat::LittleEndian );

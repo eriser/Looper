@@ -1,6 +1,7 @@
 #include "TrackRecorder.hpp"
 #include <QDir>
 #include <iostream>
+#include <cstdio>
 
 TrackRecorder::TrackRecorder() : auto_start(false), auto_stop(false) {
 
@@ -70,7 +71,7 @@ void TrackRecorder::start() {
 	QAudioFormat format;
 	// Set up the desired format, for example:
 	format.setSampleRate( 44100 );
-	format.setChannelCount( 2 );
+	format.setChannelCount( 1 );
 	format.setSampleSize( 16 );
 	format.setCodec("audio/pcm");
 	format.setByteOrder( QAudioFormat::LittleEndian );
@@ -93,6 +94,8 @@ void TrackRecorder::stop() {
 
 	std::cout << "recording stopped" << std::endl;
 
+	this->f.close();
+
 	if( this->auto_start ) {
 		// cut start until sound
 	}
@@ -104,36 +107,62 @@ void TrackRecorder::stop() {
 	this->audio->stop();
 	// this->rec->stop();
 
-	QFile newfile;
+	FILE *raw_audio_file_in;
+	FILE *raw_audio_file_out;
+
 	QString p;
 	p = this->dest_file_path;
 	p += "xxx";
-	newfile.setFileName( p );\
-	newfile.open( QIODevice::WriteOnly | QIODevice::Truncate );
 
-	this->f.close();
-	this->f.open( QIODevice::ReadOnly );
+	raw_audio_file_in = fopen( this->dest_file_path.toStdString().c_str(), "rb" );
+	raw_audio_file_out = fopen( p.toStdString().c_str(), "wb" );
 
-	QByteArray qb_arr = this->f.readAll();
+	// one second average sound
+	// 44100
+	#define AVG_WINDOW_MAX_SIZE 10000 // 100000
 
-	for( QByteArray::iterator it = qb_arr.begin(); it != qb_arr.end(); ++it ) {
-		static int two_byte_read = 0;
-		static quint32 word = 0;
-		if( two_byte_read == 0 ) {
-			word = *it;
-			two_byte_read = 1;
-		} else {
-			word |= (*it) << 8;
-			std::cout << "Word: " << word << std::endl;
-			/*if( word >= 20 ) {
-				std::cout << "wieksze" << std::endl;
+	unsigned short int avg_window[AVG_WINDOW_MAX_SIZE];
+	int avg_window_index = 0;
+	unsigned short int avg_sample = 0;
+
+	unsigned short int audio_sample = 0;
+	bool start_detected_flag = false;
+	while( !feof( raw_audio_file_in ) ) {
+
+		fread( &audio_sample, sizeof(unsigned short int), 1, raw_audio_file_in );
+		// std::cout << "audio sample: " << audio_sample << std::endl;
+
+		if( !start_detected_flag ) {
+
+			if( avg_window_index == AVG_WINDOW_MAX_SIZE ) {
+				// Check if average: silence/sound
+				std::cout << "Avg sample: " << avg_sample << std::endl;
+				if( avg_sample > 20000 ) {
+					// Detected sound
+					fwrite( avg_window, sizeof(unsigned short int), avg_window_index, raw_audio_file_out );
+					start_detected_flag = true;
+				}
+				avg_sample = 0;
+				avg_window_index = 0;
 			} else {
-				std::cout << "mniejsze" << std::endl;
-			}*/
-			word = 0;
-			two_byte_read = 0;
+				// std::cout << "Computing avg; sample: " << audio_sample << "Index: " <<
+				//			 avg_window_index << std::endl;
+				avg_window[avg_window_index++] = audio_sample;
+				if( audio_sample < 65200 ) {
+					this->cmov_avg( &avg_sample, audio_sample, avg_window_index );
+				}
+			}
+
+		} else {
+
+			fwrite( &audio_sample, sizeof(unsigned short int), 1, raw_audio_file_out );
+
 		}
+
 	}
+
+	fclose( raw_audio_file_in );
+	fclose( raw_audio_file_out );
 
 	emit sig_finished( p ); // this->dest_file_path );
 
@@ -184,5 +213,17 @@ void TrackRecorder::set_auto_start( bool yesno ) {
 }
 
 void TrackRecorder::set_auto_stop( bool yesno ) {
+
+}
+
+void TrackRecorder::cmov_avg( unsigned short int *out_avg, unsigned short int new_sample, int sample_count ) {
+
+	*out_avg = ( new_sample + sample_count * (*out_avg) ) / ( sample_count + 1 );
+
+}
+
+bool TrackRecorder::sound_reached( unsigned short int *buffer, int buffer_size ) {
+
+
 
 }

@@ -33,7 +33,11 @@ class TrackRecorder : public QObject {
 		// QVector<QString> get_avail_codecs();
 		// ...
 
+		static void cmov_avg( unsigned short int *out_avg, unsigned short int new_sample, int sample_count );
+
 	private:
+
+		bool sound_reached( unsigned short int *buffer, int buffer_size );
 
 		int max_silence_sec;
 		QString dest_file_path;
