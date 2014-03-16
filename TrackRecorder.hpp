@@ -18,7 +18,7 @@ class TrackRecorder : public QObject {
 
 	signals:
 
-		void sig_finished( QString file_path );
+		void sig_finished( QString file_path, quint64 start_offset, quint64 end_offset );
 
 	public:
 

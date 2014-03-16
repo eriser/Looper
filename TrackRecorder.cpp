@@ -19,72 +19,24 @@ void TrackRecorder::start() {
 
 	std::cout << "Recording started" << std::endl;
 
-	/*QAudioEncoderSettings settings;
-	settings.setCodec( "audio/pcm" );
-	settings.setSampleRate( 44100 );
-	settings.setBitRate( 64000 );
-	settings.setQuality( QMultimedia::EncodingQuality( QMultimedia::NormalQuality ) );
-	settings.setEncodingMode( QMultimedia::ConstantQualityEncoding );
-	settings.setChannelCount( 1 );*/
-
-	std::cout << "dev" << std::endl;
-	foreach( const QString &device, this->rec->audioInputs() ) {
-		std::cout << device.toStdString() << std::endl;
-	}
-
-	std::cout << "codec" << std::endl;
-	foreach( const QString &codecName, this->rec->supportedAudioCodecs() ) {
-		std::cout << codecName.toStdString() << std::endl;
-	}
-
-	std::cout << "container" << std::endl;
-	foreach( const QString &containerName, this->rec->supportedContainers() ) {
-		std::cout << containerName.toStdString() << std::endl;
-	}
-
-	std::cout << "sample" << std::endl;
-	foreach( int sampleRate, this->rec->supportedAudioSampleRates() ) {
-		std::cout << sampleRate << std::endl;
-	}
-
-	/*
-	QString container = "audio/x-raw";
-	this->rec->setEncodingSettings( settings, QVideoEncoderSettings(), container );
-	this->rec->setAudioInput( "Integrated Microphone Array (ID" );
-
-	this->rec->setOutputLocation( QUrl::fromLocalFile( this->dest_file_path ) );
-	*/
-
-	/*
-	connect( this->rec, SIGNAL( durationChanged( qint64 ) ), this, SLOT( update_progress( qint64 ) ) );
-	connect( this->rec, SIGNAL( stateChanged( QMediaRecorder::State ) ),
-			this, SLOT( rec_state_changed( QMediaRecorder::State ) ) );
-	connect( this->rec, SIGNAL( error( QMediaRecorder::Error ) ),
-			this, SLOT( rec_error() ) );
-
-	this->rec->record();
-	*/
-
 	f.setFileName( this->dest_file_path );
 	f.open( QIODevice::WriteOnly | QIODevice::Truncate );
 
 	QAudioFormat format;
-	// Set up the desired format, for example:
 	format.setSampleRate( 44100 );
 	format.setChannelCount( 1 );
 	format.setSampleSize( 16 );
-	format.setCodec("audio/pcm");
+	format.setCodec( "audio/pcm" );
 	format.setByteOrder( QAudioFormat::LittleEndian );
 	format.setSampleType( QAudioFormat::UnSignedInt );
 
 	QAudioDeviceInfo info = QAudioDeviceInfo::defaultInputDevice();
-	if (!info.isFormatSupported(format)) {
+	if ( !info.isFormatSupported( format ) ) {
 		std::cout << "Default format not supported, trying to use the nearest." << std::endl;
-		format = info.nearestFormat(format);
+		format = info.nearestFormat( format );
 	}
 
 	audio = new QAudioInput( format, this );
-	// connect(audio, SIGNAL(stateChanged(QAudio::State)), this, SLOT(handleStateChanged(QAudio::State)));
 
 	audio->start( &f );
 
@@ -95,69 +47,57 @@ void TrackRecorder::stop() {
 	std::cout << "recording stopped" << std::endl;
 
 	this->f.close();
-
-	if( this->auto_start ) {
-		// cut start until sound
-	}
-
-	if( this->auto_stop ) {
-		// cut end until sound
-	}
-
 	this->audio->stop();
-	// this->rec->stop();
-
-	FILE *raw_audio_file_in;
-	FILE *raw_audio_file_out;
 
 	QString p;
 	p = this->dest_file_path;
 	p += "xxx";
 
-	raw_audio_file_in = fopen( this->dest_file_path.toStdString().c_str(), "rb" );
-	raw_audio_file_out = fopen( p.toStdString().c_str(), "wb" );
+	FILE *raw_audio_file_in = fopen( this->dest_file_path.toStdString().c_str(), "rb" );
+	FILE *raw_audio_file_out = fopen( p.toStdString().c_str(), "wb" );
 
-	// one second average sound
-	// 44100
-	#define AVG_WINDOW_MAX_SIZE 10000 // 100000
+	// Must be 10 000 - matched to threshold in this->sound_reached()
+	#define AVG_WINDOW_MAX_SIZE 10000
 
-	unsigned short int avg_window[AVG_WINDOW_MAX_SIZE];
-	int avg_window_index = 0;
-	unsigned short int avg_sample = 0;
+	unsigned short int samples_buf[AVG_WINDOW_MAX_SIZE];
 
-	unsigned short int audio_sample = 0;
-	bool start_detected_flag = false;
-	while( !feof( raw_audio_file_in ) ) {
+	if( this->auto_start ) {
 
-		fread( &audio_sample, sizeof(unsigned short int), 1, raw_audio_file_in );
-		// std::cout << "audio sample: " << audio_sample << std::endl;
+		bool start_detected_flag = false;
+		while( !feof( raw_audio_file_in ) ) {
 
-		if( !start_detected_flag ) {
+			fread( samples_buf, sizeof(unsigned short int), AVG_WINDOW_MAX_SIZE, raw_audio_file_in );
 
-			if( avg_window_index == AVG_WINDOW_MAX_SIZE ) {
-				// Check if average: silence/sound
-				std::cout << "Avg sample: " << avg_sample << std::endl;
-				if( avg_sample > 20000 ) {
-					// Detected sound
-					fwrite( avg_window, sizeof(unsigned short int), avg_window_index, raw_audio_file_out );
-					start_detected_flag = true;
-				}
-				avg_sample = 0;
-				avg_window_index = 0;
+			if( !start_detected_flag ) {
+				start_detected_flag = this->sound_reached( samples_buf, AVG_WINDOW_MAX_SIZE );
 			} else {
-				// std::cout << "Computing avg; sample: " << audio_sample << "Index: " <<
-				//			 avg_window_index << std::endl;
-				avg_window[avg_window_index++] = audio_sample;
-				if( audio_sample < 65200 ) {
-					this->cmov_avg( &avg_sample, audio_sample, avg_window_index );
-				}
+				fwrite( samples_buf, sizeof(unsigned short int), AVG_WINDOW_MAX_SIZE, raw_audio_file_out );
 			}
 
-		} else {
-
-			fwrite( &audio_sample, sizeof(unsigned short int), 1, raw_audio_file_out );
-
 		}
+
+	} else {
+		fread( samples_buf, sizeof(unsigned short int), AVG_WINDOW_MAX_SIZE, raw_audio_file_in );
+		fwrite( samples_buf, sizeof(unsigned short int), AVG_WINDOW_MAX_SIZE, raw_audio_file_out );
+	}
+
+	if( this->auto_stop ) {
+
+		// SEEK_END portability ?
+		fseek( raw_audio_file_in, 0, SEEK_END );
+		fseek( raw_audio_file_out, 0, SEEK_END );
+
+		// Temporary file, for audio stop detection
+		FILE *tmp = tmpfile();
+		bool end_detected_flag = false;
+
+		// _out - because data a
+		while( ftell( raw_audio_file_out ) != 0 ) {
+			fseek( raw_audio_file_out, -AVG_WINDOW_MAX_SIZE, SEEK_CUR );
+			fread( samples_buf, sizeof(unsigned short int), AVG_WINDOW_MAX_SIZE, raw_audio_file_out );
+		}
+
+		fclose( tmp );
 
 	}
 
@@ -224,6 +164,22 @@ void TrackRecorder::cmov_avg( unsigned short int *out_avg, unsigned short int ne
 
 bool TrackRecorder::sound_reached( unsigned short int *buffer, int buffer_size ) {
 
+	unsigned short int average = 0;
 
+	for( int i = 0; i < buffer_size; ++i ) {
+		if( buffer[i] < 65200 ) {
+			this->cmov_avg( &average, buffer[i], i );
+		}
+	}
+
+	std::cout << "Avg: " << average << std::endl;
+
+	// Average over thresh: sound detected
+	// Threshold matched to buffer size in this->stop()
+	if( average > 20000 ) {
+		return true;
+	}
+
+	return false;
 
 }
