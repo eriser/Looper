@@ -129,6 +129,8 @@ void TrackRecorder::slot_update_progress() {
 	++this->track_length_sec;
 	std::cout << "Progress: " << this->track_length_sec << " secs" << std::endl;
 
+	emit sig_recording_status( this->track_length_sec );
+
 }
 
 void TrackRecorder::set_auto_start( bool yesno ) {

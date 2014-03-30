@@ -16,17 +16,31 @@ MainWindow::MainWindow( QWidget *parent ) :
 	// ui->tableWidgetTrack->insertRow( 0 );
 	// ui->tableWidgetTrack->setCellWidget( 0, 0, new QPushButton( "cokolwiek", this ) );
 
-	connect( ui->pushButtonStartRecording, SIGNAL( clicked() ), this, SLOT( slot_start_recording_clicked() ) );
-	connect( ui->pushButtonStopRecording, SIGNAL( clicked() ), this, SLOT( slot_recording_stop() ) );
+	// MainWindow GUI to MainWindow signals
+	connect( ui->pushButtonStartRecording, SIGNAL( clicked() ),
+			 this, SLOT( slot_recording_start_clicked() ) );
+	connect( ui->pushButtonStopRecording, SIGNAL( clicked() ),
+			 this, SLOT( slot_recording_stop_clicked() ) );
 
-	connect( this, SIGNAL( sig_recording_stop() ), &this->track_rec, SLOT( slot_recording_stop() ) );
+	// MainWindow to TrackRecorder signals
+	connect( this, SIGNAL( sig_recording_stop() ),
+			 &this->track_rec, SLOT( slot_recording_stop_clicked() ) );
 
+	// TrackRecorder to MainWindow signals
 	connect( &this->track_rec, SIGNAL( sig_finished( TrackRecorder::TmpFilePtr, quint64, quint64 ) ),
 			 this, SLOT( slot_recording_finished( TrackRecorder::TmpFilePtr, quint64, quint64 ) ) );
 
+	// TrackRecorder to TrackRecorderStatus signals
+	connect( &this->track_rec, SIGNAL( sig_recording_status(int) ),
+			 &this->track_rec_status, SLOT( slot_recording_status(int) ) );
+
+	// TrackRecorderStatus to MainWindow signals
+	connect( &this->track_rec_status, SIGNAL( sig_recording_stop() ),
+			 this, SLOT( slot_recording_stop_clicked() ) );
+
 }
 
-void MainWindow::slot_start_recording_clicked() {
+void MainWindow::slot_recording_start_clicked() {
 
 	/*
 	QString fpath;
@@ -43,11 +57,14 @@ void MainWindow::slot_start_recording_clicked() {
 	this->track_rec.set_auto_stop( true );
 	this->track_rec.slot_recording_start();
 
+	this->track_rec_status.show();
+
 }
 
-void MainWindow::slot_recording_stop() {
+void MainWindow::slot_recording_stop_clicked() {
 
 	emit sig_recording_stop();
+	this->track_rec_status.hide();
 
 }
 

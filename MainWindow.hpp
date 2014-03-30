@@ -2,6 +2,7 @@
 #define MAINWINDOW_HPP
 
 #include "TrackRecorder.hpp"
+#include "TrackRecorderStatus.hpp"
 #include <QMainWindow>
 #include <QMediaRecorder>
 #include <QAudioRecorder>
@@ -23,8 +24,8 @@ class MainWindow : public QMainWindow {
 
 	public slots:
 
-		void slot_start_recording_clicked();
-		void slot_recording_stop();
+		void slot_recording_start_clicked();
+		void slot_recording_stop_clicked();
 		void slot_recording_finished( TrackRecorder::TmpFilePtr tmp_file, quint64 start_offset, quint64 end_offset );
 		void slot_handle_audio_state( QAudio::State new_state );
 
@@ -37,6 +38,7 @@ class MainWindow : public QMainWindow {
 
 		Ui::MainWindow *ui;
 		TrackRecorder track_rec;
+		TrackRecorderStatus track_rec_status;
 		QAudioOutput *audio;
 		QFile f;
 

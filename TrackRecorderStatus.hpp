@@ -2,6 +2,7 @@
 #define TRACKRECORDERSTATUS_HPP
 
 #include <QMainWindow>
+#include <QTime>
 
 namespace Ui {
 	class TrackRecorderStatus;
@@ -20,7 +21,7 @@ class TrackRecorderStatus : public QMainWindow {
 		void slot_stop_recording_clicked();
 
 		void slot_recording_started();
-		void slot_record_status( int seconds_recorded );
+		void slot_recording_status( int seconds_recorded );
 		void slot_sound_start_detected();
 		void slot_sound_stop_detected();
 		void slot_recording_stopped();

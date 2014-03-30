@@ -48,6 +48,7 @@ class TrackRecorder : public QObject {
 
 	signals:
 
+		void sig_recording_status( int track_length_seconds );
 		void sig_finished( TrackRecorder::TmpFilePtr file_path, quint64 start_offset, quint64 end_offset );
 
 
