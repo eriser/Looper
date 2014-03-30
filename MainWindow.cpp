@@ -16,18 +16,19 @@ MainWindow::MainWindow( QWidget *parent ) :
 	// ui->tableWidgetTrack->insertRow( 0 );
 	// ui->tableWidgetTrack->setCellWidget( 0, 0, new QPushButton( "cokolwiek", this ) );
 
-	connect( ui->pushButton, SIGNAL( clicked() ), this, SLOT( whatevz() ) );
-	connect( ui->pushButton_2, SIGNAL( clicked() ), this, SLOT( recording_stop() ) );
+	connect( ui->pushButtonStartRecording, SIGNAL( clicked() ), this, SLOT( slot_start_recording_clicked() ) );
+	connect( ui->pushButtonStopRecording, SIGNAL( clicked() ), this, SLOT( slot_recording_stop() ) );
 
-	connect( this, SIGNAL( sig_recording_stop() ), &this->track_rec, SLOT( stop() ) );
+	connect( this, SIGNAL( sig_recording_stop() ), &this->track_rec, SLOT( slot_recording_stop() ) );
 
-	connect( &this->track_rec, SIGNAL( sig_finished( QString, quint64, quint64 ) ),
-			 this, SLOT( slot_recording_finished( QString, quint64, quint64 ) ) );
+	connect( &this->track_rec, SIGNAL( sig_finished( TrackRecorder::TmpFilePtr, quint64, quint64 ) ),
+			 this, SLOT( slot_recording_finished( TrackRecorder::TmpFilePtr, quint64, quint64 ) ) );
 
 }
 
-void MainWindow::whatevz() {
+void MainWindow::slot_start_recording_clicked() {
 
+	/*
 	QString fpath;
 	fpath = QDir::currentPath();
 	fpath += "/test.raw";
@@ -35,45 +36,48 @@ void MainWindow::whatevz() {
 	QMediaPlayer *player = new QMediaPlayer(this);
 	player->setVolume(50);
 	player->setMedia(QUrl::fromLocalFile("C:/ChatIn.wav"));
-	// player->play();
+	player->play();
+	*/
 
-	this->track_rec.set_dest_file( fpath );
 	this->track_rec.set_auto_start( true );
 	this->track_rec.set_auto_stop( true );
-	this->track_rec.start();
+	this->track_rec.slot_recording_start();
 
 }
 
-void MainWindow::recording_stop() {
+void MainWindow::slot_recording_stop() {
 
 	emit sig_recording_stop();
 
 }
 
-void MainWindow::slot_recording_finished( QString file_path, quint64 start_offset, quint64 end_offset ) {
+void MainWindow::slot_recording_finished( TrackRecorder::TmpFilePtr tmp_file, quint64 start_offset, quint64 end_offset ) {
 
 	// QAudio output ...
-	std::cout << "Recording ended (" << file_path.toStdString() << ")." << std::endl;
+	std::cout << "Recording ended (" << tmp_file->fileName().toStdString() << ")." << std::endl;
 	std::cout << "Start: " << start_offset << " End: " << end_offset << std::endl;
 
 	FILE *tmp = tmpfile();
-	FILE *fp = fopen( file_path.toStdString().c_str(), "rb" );
+	FILE *fp = fopen( tmp_file->fileName().toStdString().c_str(), "rb" );
 
 	fseek( fp, start_offset, SEEK_CUR );
 	unsigned short int sample;
 	while( !feof( fp ) ) {
+
 		fread( &sample, sizeof( unsigned short int ), 1, fp );
 		fwrite( &sample, sizeof( unsigned short int ), 1, tmp );
-		if( ftell( fp ) == end_offset ) {
+
+		if( ftell(fp) != -1 && (unsigned int)ftell( fp ) == end_offset ) {
 			break;
 		}
+
 	}
 
 	fclose( fp );
-	remove( file_path.toStdString().c_str() );
+	remove( tmp_file->fileName().toStdString().c_str() );
 	rewind( tmp );
 
-	fp = fopen( file_path.toStdString().c_str(), "wb" );
+	fp = fopen( tmp_file->fileName().toStdString().c_str(), "wb" );
 	while( !feof( tmp ) ) {
 		fread( &sample, sizeof( unsigned short int ), 1, tmp );
 		fwrite( &sample, sizeof( unsigned short int ), 1, fp );
@@ -81,7 +85,7 @@ void MainWindow::slot_recording_finished( QString file_path, quint64 start_offse
 	fclose( fp );
 	fclose( tmp );
 
-	f.setFileName( file_path );
+	f.setFileName( tmp_file->fileName() );
 	f.open( QIODevice::ReadOnly );
 
 	QAudioFormat format;

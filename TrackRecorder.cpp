@@ -3,9 +3,12 @@
 #include <iostream>
 #include <cstdio>
 
-TrackRecorder::TrackRecorder() : auto_start(false), auto_stop(false) {
-
-	this->rec = new QAudioRecorder( this );
+TrackRecorder::TrackRecorder() :
+	auto_start(false),
+	auto_stop(false),
+	track_length_timer(this),
+	rec( new QAudioRecorder(this) ),
+	track_length_sec(0) {
 
 }
 
@@ -15,12 +18,12 @@ TrackRecorder::~TrackRecorder() {
 
 }
 
-void TrackRecorder::start() {
+void TrackRecorder::slot_recording_start() {
 
-	std::cout << "Recording started" << std::endl;
+	std::cout << "Recording started." << std::endl;
 
-	f.setFileName( this->dest_file_path );
-	f.open( QIODevice::WriteOnly | QIODevice::Truncate );
+	this->track_file = new QTemporaryFile();
+	this->track_file->open();
 
 	QAudioFormat format;
 	format.setSampleRate( 44100 );
@@ -38,23 +41,27 @@ void TrackRecorder::start() {
 
 	audio = new QAudioInput( format, this );
 
-	audio->start( &f );
+	audio->start( this->track_file );
+
+	connect( &this->track_length_timer, SIGNAL( timeout() ), this, SLOT( slot_update_progress() ) );
+	this->track_length_timer.start( 1000 );
 
 }
 
-void TrackRecorder::stop() {
+void TrackRecorder::slot_recording_stop() {
 
-	std::cout << "recording stopped" << std::endl;
+	std::cout << "Recording stopped." << std::endl;
+	this->track_length_timer.stop();
 
-	this->f.close();
+	this->track_file->close();
 	this->audio->stop();
 
-	FILE *raw_audio_file_in = fopen( this->dest_file_path.toStdString().c_str(), "rb" );
+	FILE *raw_audio_file_in = fopen( this->track_file->fileName().toStdString().c_str(), "rb" );
 
 	quint64 audio_start_offset = 0;
 	quint64 audio_end_offset = 0;
 
-	// Get size of file
+	// Get size of file.
 	fseek( raw_audio_file_in, 0, SEEK_END );
 	audio_end_offset = ftell( raw_audio_file_in );
 	rewind( raw_audio_file_in );
@@ -110,47 +117,17 @@ void TrackRecorder::stop() {
 
 	fclose( raw_audio_file_in );
 
-	emit sig_finished( this->dest_file_path, audio_start_offset, audio_end_offset ); // this->dest_file_path );
+	emit sig_finished( TrackRecorder::TmpFilePtr(this->track_file), audio_start_offset, audio_end_offset ); // this->dest_file_path );
+
+	// Yield shared pointer.
+	this->track_file = NULL;
 
 }
 
-void TrackRecorder::update_progress( qint64 progress ) {
+void TrackRecorder::slot_update_progress() {
 
-	std::cout << "Progress: " << progress << std::endl;
-
-}
-
-void TrackRecorder::rec_state_changed( QMediaRecorder::State new_state ) {
-
-	std::cout << "rec state changed" << std::endl;
-	switch( new_state ) {
-		case QMediaRecorder::RecordingState:
-			std::cout << "state: recording" << std::endl;
-			break;
-		case QMediaRecorder::PausedState:
-			std::cout << "state: paused" << std::endl;
-			break;
-		case QMediaRecorder::StoppedState:
-			std::cout << "state: stopped" << std::endl;
-			break;
-	}
-
-}
-
-void TrackRecorder::rec_error() {
-
-	std::cout << "ERROR: " << this->rec->errorString().toStdString() << std::endl;
-
-}
-
-
-void TrackRecorder::set_dest_file( QString path ) {
-
-	this->dest_file_path = path;
-
-}
-
-void TrackRecorder::set_max_silence_time( int max_silence_sec ) {
+	++this->track_length_sec;
+	std::cout << "Progress: " << this->track_length_sec << " secs" << std::endl;
 
 }
 
