@@ -145,6 +145,14 @@ void TrackRecorder::set_auto_stop( bool yesno ) {
 
 }
 
+quint64 TrackRecorder::detect_track_start( TrackRecorder::TmpFilePtr tmp_file ) {
+
+}
+
+quint64 TrackRecorder::detect_track_end( TrackRecorder::TmpFilePtr tmp_file ) {
+
+}
+
 void TrackRecorder::cmov_avg( unsigned short int *out_avg, unsigned short int new_sample, int sample_count ) {
 
 	*out_avg = ( new_sample + sample_count * (*out_avg) ) / ( sample_count + 1 );

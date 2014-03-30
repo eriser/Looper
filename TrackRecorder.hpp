@@ -29,6 +29,9 @@ class TrackRecorder : public QObject {
 		// QVector<QString> get_avail_codecs();
 		// ...
 
+		static quint64 detect_track_start( TrackRecorder::TmpFilePtr tmp_file );
+		static quint64 detect_track_end( TrackRecorder::TmpFilePtr tmp_file );
+
 		// Cumulative moving average
 		static void cmov_avg( unsigned short int *out_avg, unsigned short int new_sample, int sample_count );
 

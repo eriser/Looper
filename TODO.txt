@@ -1,0 +1,4 @@
+TrackSettings - det. start & stop, connect gui, delegate edited
+MainWindow - QVector -> start & stop
+TrackRecorderStatus - text info
+MainWindow - play/stop/(pause?)

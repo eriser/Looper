@@ -70,6 +70,8 @@ void MainWindow::slot_recording_stop_clicked() {
 
 void MainWindow::slot_recording_finished( TrackRecorder::TmpFilePtr tmp_file, quint64 start_offset, quint64 end_offset ) {
 
+	// Show TrackSettings window, set file to edit
+
 	// QAudio output ...
 	std::cout << "Recording ended (" << tmp_file->fileName().toStdString() << ")." << std::endl;
 	std::cout << "Start: " << start_offset << " End: " << end_offset << std::endl;

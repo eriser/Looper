@@ -1,6 +1,7 @@
 #ifndef TRACKSETTINGS_HPP
 #define TRACKSETTINGS_HPP
 
+#include "TrackRecorder.hpp"
 #include <QMainWindow>
 
 namespace Ui {
@@ -19,6 +20,15 @@ class TrackSettings : public QMainWindow {
 	private:
 
 		Ui::TrackSettings *ui;
+
+	private slots:
+
+		// void slot_..._clicked();
+		// changed
+
+	signals:
+
+		void sig_settings_finished( TrackRecorder::TmpFilePtr file, quint64 start, quint64 stop );
 
 };
 
