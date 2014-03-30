@@ -12,6 +12,10 @@ MainWindow::MainWindow( QWidget *parent ) :
 
 	ui->setupUi(this);
 
+	// http://www.qtcentre.org/threads/37856-QtableWidget-With-Pushutton-get-row-error + qsignalmapper
+	// ui->tableWidgetTrack->insertRow( 0 );
+	// ui->tableWidgetTrack->setCellWidget( 0, 0, new QPushButton( "cokolwiek", this ) );
+
 	connect( ui->pushButton, SIGNAL( clicked() ), this, SLOT( whatevz() ) );
 	connect( ui->pushButton_2, SIGNAL( clicked() ), this, SLOT( recording_stop() ) );
 

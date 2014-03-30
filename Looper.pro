@@ -17,9 +17,15 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         MainWindow.cpp \
-    TrackRecorder.cpp
+    TrackRecorder.cpp \
+    TrackSettings.cpp \
+    TrackRecorderStatus.cpp
 
 HEADERS  += MainWindow.hpp \
-    TrackRecorder.hpp
+    TrackRecorder.hpp \
+    TrackSettings.hpp \
+    TrackRecorderStatus.hpp
 
-FORMS    += MainWindow.ui
+FORMS    += MainWindow.ui \
+    TrackSettings.ui \
+    TrackRecorderStatus.ui

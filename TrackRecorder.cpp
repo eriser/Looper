@@ -168,7 +168,6 @@ void TrackRecorder::set_auto_stop( bool yesno ) {
 
 void TrackRecorder::cmov_avg( unsigned short int *out_avg, unsigned short int new_sample, int sample_count ) {
 
-	// Cumulative moving average
 	*out_avg = ( new_sample + sample_count * (*out_avg) ) / ( sample_count + 1 );
 
 }
@@ -187,7 +186,7 @@ bool TrackRecorder::sound_reached( unsigned short int *buffer, int buffer_size )
 
 	// Average over thresh: sound detected
 	// Threshold matched to buffer size in this->stop()
-	if( average > 20000 ) {
+	if( average > 25000 ) {
 		return true;
 	}
 

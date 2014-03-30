@@ -33,6 +33,7 @@ class TrackRecorder : public QObject {
 		// QVector<QString> get_avail_codecs();
 		// ...
 
+		// Cumulative moving average
 		static void cmov_avg( unsigned short int *out_avg, unsigned short int new_sample, int sample_count );
 
 	private:
