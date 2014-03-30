@@ -1,5 +1,5 @@
-#ifndef __TRACKRECORDER_HPP__
-#define __TRACKRECORDER_HPP__
+#ifndef TRACKRECORDER_HPP
+#define TRACKRECORDER_HPP
 
 #include <QtMultimedia>
 #include <QTemporaryFile>
