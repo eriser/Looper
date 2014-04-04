@@ -24,7 +24,7 @@ MainWindow::MainWindow( QWidget *parent ) :
 
 	// MainWindow to TrackRecorder signals
 	connect( this, SIGNAL( sig_recording_stop() ),
-			 &this->track_rec, SLOT( slot_recording_stop_clicked() ) );
+			 &this->track_rec, SLOT( slot_recording_stop() ) );
 
 	// TrackRecorder to MainWindow signals
 	connect( &this->track_rec, SIGNAL( sig_finished( TrackRecorder::TmpFilePtr, quint64, quint64 ) ),
